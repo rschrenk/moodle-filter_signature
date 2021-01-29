@@ -29,4 +29,5 @@ $string['pluginname'] = 'Signature Filter';
 $string['privacy:metadata'] = 'This plugin does not store personal information';
 
 $string['sign'] = 'sign';
+$string['sign_here'] = 'Sign here';
 $string['signature'] = 'Signature';

@@ -37,17 +37,14 @@ class filter_signature extends moodle_text_filter {
             return $text;
         }
 
-        $texts = explode($text, '{signature');
-        $text = '';
-        foreach ($texts as $txtpart) {
-            $embed = '';
+        $texts = explode('{signature', $text);
+        for($a = 1; $a < count($texts); $a++) {
+            $subkey = substr($texts[$a], 0, strpos($texts[$a], '}'));
+            $rest = substr($texts[$a], strpos($texts[$a], '}') + 1);
 
-            $subkey = substr($txtpart, 0, strpos($txtpart, '}'));
-            $txtpart = substr($txtpart, strpos($txtpart, '}') + 1);
-
-            $filearea = self::$filearea;
-            if (!empty($key)) {
-                $filearea .= '_' . $subkey;
+            if (!empty($subkey)) {
+                // Remove preceding _
+                $subkey = substr($subkey, 1);
             }
 
             $params = array(
@@ -57,8 +54,9 @@ class filter_signature extends moodle_text_filter {
             );
 
             $embed = $OUTPUT->render_from_template('filter_signature/field', $params);
-            $text .= $embed . $txtpart;
+            $texts[$a] = $embed . $rest;
         }
-        return $text;
+
+        return implode("", $texts);
     }
 }

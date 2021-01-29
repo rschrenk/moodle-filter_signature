@@ -42,7 +42,7 @@ $capabilities = array(
         ),
     ),
     'filter/signature:sign' => array(
-        'riskbitmask' => null,
+        'riskbitmask' => RISK_NONE,
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => array(
