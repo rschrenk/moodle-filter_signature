@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace filter_signature;
+
 defined('MOODLE_INTERNAL') || die;
 
 /**
@@ -24,8 +26,6 @@ defined('MOODLE_INTERNAL') || die;
  * @author     Robert Schrenk
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-namespace filter_signature;
 
 class lib {
     public static $component = 'filter_signature';

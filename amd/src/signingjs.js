@@ -1,5 +1,8 @@
+filter_signing_handler = [];
+
 define(['jquery'], function ($) {
     return {
+        uniqid: undefined,
         mousePressed: undefined,
         lastX: undefined, lastY: undefined,
         ctx: undefined,
@@ -10,22 +13,26 @@ define(['jquery'], function ($) {
         isMobile: undefined,
 
         init: function (uniqid) {
-            var handler = this;
-            handler.uniqid = uniqid;
+            this.uniqid = uniqid;
+            filter_signing_handler[uniqid] = this;
+            $('#canvas-' + uniqid).attr('data-uniqid', uniqid);
+            console.log('Signing handlers are', filter_signing_handler);
+            handler = this;
             console.log('filter_signature/signingjs:initialize(uniqid)', handler.uniqid);
 
             if (document.getElementById('image-' + handler.uniqid) != null) {
                 var image = document.getElementById('image-' + handler.uniqid);
-                image.setAttribute('height', image.offsetWidth / 1000 * 320);
+                //image.setAttribute('height', image.offsetWidth / 1000 * 320);
                 return;
             }
 
             handler.canvas = document.getElementById('canvas-' + handler.uniqid);
-            handler.canvas.setAttribute('height', handler.canvas.offsetWidth / 1000 * 320);
+            //handler.canvas.setAttribute('height', handler.canvas.offsetWidth / 1000 * 320);
             handler.canvas.setAttribute('data-uniqid', handler.uniqid);
 
             handler.ctx = handler.canvas.getContext('2d');
             var rect = handler.canvas.getBoundingClientRect();
+            console.log('set bounds to ', rect);
             handler.canvas.width = rect.width;
             handler.canvas.height = rect.height;
             // setup lines styles ..
@@ -43,10 +50,10 @@ define(['jquery'], function ($) {
                 handler.clearCanvas(handler.canvas, ctx);
             });
             $('#id_submitbutton-' + handler.uniqid).click(function () {
-                console.log('Submitted', handler.uniqid);
                 var contextid = $('#contextid-' + handler.uniqid).val();
                 var subkey = $('#subkey-' + handler.uniqid).val();
                 var signature = $('#canvas-' + handler.uniqid)[0].toDataURL();
+                console.log('Submitted', handler.uniqid, contextid, subkey, signature);
                 $('#id_signing-' + handler.uniqid).val(signature);
                 require(['core/ajax'], function(ajax) {
                     ajax.call([{
@@ -63,48 +70,13 @@ define(['jquery'], function ($) {
             });
 
             // mouse/touch events ..
-            handler.canvas.addEventListener((handler.isMobile ? 'touchstart' : 'mousedown'), function(e) {
-                console.log('start');
-                e.preventDefault();
-                e.stopPropagation();
-                handler.drawing = true;
-                handler.lastPos = handler.getMousePos(handler.canvas, e);
-                handler.mousePos = handler.lastPos;
-            });
-            handler.canvas.addEventListener((handler.isMobile ? 'touchmove' : 'mousemove'), function(e) {
-                console.log('move');
-                e.preventDefault();
-                e.stopPropagation();
-                handler.mousePos = handler.getMousePos(handler.canvas, e);
-            });
-            handler.canvas.addEventListener((handler.isMobile ? 'touchend' : 'mouseup'), function(e) {
-                console.log('end');
-                e.preventDefault();
-                e.stopPropagation();
-                handler.drawing = false;
-            });
+            handler.canvas.addEventListener((handler.isMobile ? 'touchstart' : 'mousedown'), handler.eventStart);
+            handler.canvas.addEventListener((handler.isMobile ? 'touchmove' : 'mousemove'), handler.eventMove);
+            handler.canvas.addEventListener((handler.isMobile ? 'touchend' : 'mouseup'), handler.eventStop);
 
-            document.body.addEventListener("touchstart", function (e) {
-                console.log('bodystart');
-                if (e.target == handler.canvas) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-            }, false);
-            document.body.addEventListener("touchend", function (e) {
-                console.log('bodyend');
-                if (e.target == handler.canvas) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-            }, false);
-            document.body.addEventListener("touchmove", function (e) {
-                console.log('bodymove');
-                if (e.target == handler.canvas) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-            }, false);
+            document.body.addEventListener("touchstart", handler.eventStartBody, false);
+            document.body.addEventListener("touchmove", handler.eventMoveBody, false);
+            document.body.addEventListener("touchend", handler.eventStopBody, false);
 
             $(window).on('resize', function () {
                 var W = handler.canvas.width, H = handler.canvas.height;
@@ -116,17 +88,15 @@ define(['jquery'], function ($) {
                 handler.ctx.putImageData(temp,0,0);
             });
         },
-        save: function () {
-            initialize();
-        },
-        getMousePos: function(canvasDom, touchOrMouseEvent) {
+        getMousePos: function(handler, canvasDom, touchOrMouseEvent) {
             var rect = canvasDom.getBoundingClientRect();
             return {
                 x: (handler.isMobile ? touchOrMouseEvent.touches[0].clientX : touchOrMouseEvent.clientX) - rect.left,
                 y: (handler.isMobile ? touchOrMouseEvent.touches[0].clientY : touchOrMouseEvent.clientY) - rect.top
             };
         },
-        renderCanvas: function() {
+        renderCanvas: function(handler) {
+            console.log('renderCanvas', handler.uniqid);
             if (handler.drawing) {
                 handler.ctx.moveTo(handler.lastPos.x, handler.lastPos.y);
                 handler.ctx.lineTo(handler.mousePos.x, handler.mousePos.y);
@@ -138,9 +108,83 @@ define(['jquery'], function ($) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             canvas.width = canvas.width;
         },
-        downloadCanvas: function() {
-           this.href = handler.canvas.toDataURL();
+        eventStart: function(e){
+            uniqid = $(this).attr('data-uniqid');
+            handler = filter_signing_handler[uniqid];
+            //console.log('start', uniqid, handler);
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof handler !== 'undefined') {
+                handler.drawing = true;
+                handler.lastPos = handler.getMousePos(handler, handler.canvas, e);
+                handler.mousePos = handler.lastPos;
+            } else {
+                console.error('No handler found for uniqid', uniqid);
+            }
         },
+        eventStartBody: function(e) {
+            //console.log('bodystart', this);
+            uniqid = $(e).attr('data-uniqid');
+            if (typeof uniqid !== 'undefined') {
+                handler = filter_signing_handler[uniqid];
+                if (e.target == handler.canvas) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }
+        },
+        eventMove: function(e) {
+            uniqid = $(this).attr('data-uniqid');
+            //console.log('Signing handlers are', filter_signing_handler);
+            handler = filter_signing_handler[uniqid];
+            console.log('move', uniqid, handler.uniqid);
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof handler !== 'undefined') {
+                handler.mousePos = handler.getMousePos(handler, handler.canvas, e);
+                if (handler.drawing) {
+                    handler.renderCanvas(handler);
+                }
+            } else {
+                console.error('No handler found for uniqid', uniqid);
+            }
+        },
+        eventMoveBody: function(e) {
+            //console.log('bodystart', this);
+            uniqid = $(e).attr('data-uniqid');
+            if (typeof uniqid !== 'undefined') {
+                handler = filter_signing_handler[uniqid];
+                if (e.target == handler.canvas) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }
+        },
+        eventStop: function(e) {
+            uniqid = $(this).attr('data-uniqid');
+            //console.log('Signing handlers are', filter_signing_handler);
+            handler = filter_signing_handler[uniqid];
+            //console.log('end', uniqid, handler);
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof handler !== 'undefined') {
+                handler.drawing = false;
+            } else {
+                console.error('No handler found for uniqid', uniqid);
+            }
+        },
+        eventStopBody: function(e) {
+            //console.log('bodystart', this);
+            uniqid = $(e).attr('data-uniqid');
+            if (typeof uniqid !== 'undefined') {
+                handler = filter_signing_handler[uniqid];
+                if (e.target == handler.canvas) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }
+        },
+
     };
 });
 
