@@ -47,14 +47,22 @@ class filter_signature extends moodle_text_filter {
                 $subkey = substr($subkey, 1);
             }
 
-            $params = array(
-                'contextid' => $PAGE->context->id,
-                'signaturepath' => \filter_signature\lib::get_signature($PAGE->context->id, $subkey),
-                'subkey' => $subkey,
-            );
+            // Filter only works on module level.
+            if ($PAGE->context->contextlevel == 70) {
+                $params = array(
+                    'contextid' => $PAGE->context->id,
+                    'signaturepath' => \filter_signature\lib::get_signature($PAGE->context->id, $subkey),
+                    'subkey' => $subkey,
+                );
 
-            $embed = $OUTPUT->render_from_template('filter_signature/field', $params);
-            $texts[$a] = $embed . $rest;
+                $embed = $OUTPUT->render_from_template('filter_signature/field', $params);
+                $texts[$a] = $embed . $rest;
+            } else {
+                $embed = $OUTPUT->render_from_template('filter_signature/field_unsupported_context', $params);
+                $texts[$a] = $embed . $rest;
+            }
+
+
         }
 
         return implode("", $texts);

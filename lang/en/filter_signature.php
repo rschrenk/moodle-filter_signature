@@ -28,6 +28,8 @@ $string['pluginname'] = 'Signature Filter';
 
 $string['privacy:metadata'] = 'This plugin does not store personal information';
 
+$string['contextlevel_incompatible'] = 'incompatible context for signature';
+
 $string['sign'] = 'sign';
 $string['sign_here'] = 'Sign here';
 $string['signature'] = 'Signature';
